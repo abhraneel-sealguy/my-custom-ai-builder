@@ -1,7 +1,6 @@
 import streamlit as st
 from google import genai
-import os
-from pathlib import Path
+import base64
 
 # 1. Setup the Webpage Title and Style
 st.set_page_config(page_title="Free Custom AI Builder", page_icon="🤖", layout="wide")
@@ -142,8 +141,11 @@ else:
                                 # Read the uploaded image
                                 image_data = uploaded_file.read()
                                 
-                                # Display the uploaded image first
+                                # Display the uploaded image
                                 st.image(image_data, caption="Uploaded Image", use_column_width=True)
+                                
+                                # Encode image to base64
+                                image_base64 = base64.standard_b64encode(image_data).decode("utf-8")
                                 
                                 # Determine the media type
                                 file_extension = uploaded_file.name.split('.')[-1].lower()
@@ -156,23 +158,23 @@ else:
                                 }
                                 media_type = media_type_map.get(file_extension, 'image/jpeg')
                                 
-                                # Create the analysis prompt with system instructions
-                                analysis_context = f"SYSTEM INSTRUCTIONS:\n{st.session_state['custom_persona']}\n\n{analysis_prompt_input}"
+                                # Create system context with persona
+                                system_context = f"SYSTEM INSTRUCTIONS:\n{st.session_state['custom_persona']}\n\nUser request: {analysis_prompt_input}"
                                 
-                                # Use Gemini's native image analysis with vision capability
-                                # Pass image data directly to the model with base64 encoding
-                                import base64
-                                image_base64 = base64.standard_b64encode(image_data).decode("utf-8")
+                                # Use genai.Part to properly structure the request
+                                image_part = genai.Part(
+                                    inline_data=genai.types.BlobData(
+                                        mime_type=media_type,
+                                        data=image_base64
+                                    )
+                                )
                                 
-                                # Create multimodal request
+                                # Send to Gemini with image
                                 response = client.models.generate_content(
                                     model='gemini-2.5-flash',
                                     contents=[
-                                        analysis_context,
-                                        {
-                                            "mime_type": media_type,
-                                            "data": image_base64,
-                                        }
+                                        system_context,
+                                        image_part
                                     ]
                                 )
                                 
@@ -182,7 +184,7 @@ else:
                                 
                             except Exception as image_error:
                                 st.error(f"Error analyzing image: {str(image_error)}")
-                                st.info("Make sure your Gemini API key has access to vision capabilities. You may need to upgrade your API access.")
+                                st.info("💡 Troubleshooting tips:\n1. Make sure your Gemini API key has vision capabilities\n2. Try with a different image format (PNG or JPG)\n3. Check that your API account has Vision API access enabled")
 
     except Exception as e:
         st.error(f"An error occurred. Check your API key or connection. Details: {e}")
