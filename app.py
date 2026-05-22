@@ -107,7 +107,7 @@ else:
                     if not image_description.strip():
                         st.error("Please describe the image you want to generate!")
                     else:
-                        with st.spinner("Your AI is crafting the perfect image prompt and generating..."):
+                        with st.spinner("Your AI is crafting the perfect image prompt..."):
                             # First, have the custom AI create a detailed prompt based on its personality
                             prompt_creation = f"SYSTEM INSTRUCTIONS:\n{st.session_state['custom_persona']}\n\nYou are being asked to create a detailed image generation prompt. The user wants: {image_description}\n\nCreate a vivid, detailed prompt that matches your personality and the user's request. Return ONLY the image prompt, nothing else."
                             
@@ -119,17 +119,7 @@ else:
                             detailed_prompt = prompt_response.text
                             
                             st.info(f"**AI-Generated Prompt:** {detailed_prompt}")
-                            
-                            # Generate the image using Imagen via Gemini
-                            image_generation_prompt = f"Generate a high-quality image based on this detailed description: {detailed_prompt}"
-                            
-                            image_response = client.models.generate_content(
-                                model='gemini-2.5-flash',
-                                contents=image_generation_prompt
-                            )
-                            
-                            st.success("✅ Image generated successfully!")
-                            st.write(image_response.text)
+                            st.success("✅ Image prompt generated successfully! (Note: Image generation requires additional image generation API)")
 
             with tab3:
                 st.subheader("Analyze Images with Your Custom AI")
@@ -152,6 +142,9 @@ else:
                                 # Read the uploaded image
                                 image_data = uploaded_file.read()
                                 
+                                # Display the uploaded image first
+                                st.image(image_data, caption="Uploaded Image", use_column_width=True)
+                                
                                 # Determine the media type
                                 file_extension = uploaded_file.name.split('.')[-1].lower()
                                 media_type_map = {
@@ -166,29 +159,30 @@ else:
                                 # Create the analysis prompt with system instructions
                                 analysis_context = f"SYSTEM INSTRUCTIONS:\n{st.session_state['custom_persona']}\n\n{analysis_prompt_input}"
                                 
-                                # Upload the image to Gemini
-                                image_part = genai.upload_file(
-                                    genai.EmbeddedContent(
-                                        mime_type=media_type,
-                                        data=image_data
-                                    )
-                                )
+                                # Use Gemini's native image analysis with vision capability
+                                # Pass image data directly to the model with base64 encoding
+                                import base64
+                                image_base64 = base64.standard_b64encode(image_data).decode("utf-8")
                                 
-                                # Analyze the image
-                                analysis_response = client.models.generate_content(
+                                # Create multimodal request
+                                response = client.models.generate_content(
                                     model='gemini-2.5-flash',
-                                    contents=[analysis_context, image_part]
+                                    contents=[
+                                        analysis_context,
+                                        {
+                                            "mime_type": media_type,
+                                            "data": image_base64,
+                                        }
+                                    ]
                                 )
                                 
                                 st.success("✅ Analysis complete!")
                                 st.write("**AI Analysis:**")
-                                st.write(analysis_response.text)
-                                
-                                # Display the uploaded image
-                                st.image(image_data, caption="Analyzed Image", use_column_width=True)
+                                st.write(response.text)
                                 
                             except Exception as image_error:
-                                st.error(f"Error analyzing image: {image_error}")
+                                st.error(f"Error analyzing image: {str(image_error)}")
+                                st.info("Make sure your Gemini API key has access to vision capabilities. You may need to upgrade your API access.")
 
     except Exception as e:
         st.error(f"An error occurred. Check your API key or connection. Details: {e}")
