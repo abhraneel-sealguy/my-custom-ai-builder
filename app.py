@@ -70,7 +70,7 @@ def update_clock():
                 date_str = time_in_tz.strftime("%a, %b %d, %Y")
                 utc_offset = time_in_tz.strftime("%z")
                 offset_formatted = f"{utc_offset[:3]}:{utc_offset[3:]}"
-                clock_html += f'<div style="margin: 10px 0; padding: 8px; border: 1px solid #00ff00; border-radius: 5px;"><strong>{label}</strong><br><span style="font-size: 16px; font-weight: bold;">{time_str}</span><br><span style="font-size: 10px; color: #888;">{date_str} (UTC{offset_formatted})</span></div>'
+                clock_html += f'<div style="margin: 10px 0; padding: 8px; border: 1px solid #00ff00; border-radius: 5px;"><strong>{label}</strong><br><span style="font-size: 16px; font-weight: bold;">{time_str}</span><br><span style="font-size: 11px; color: #888;">{date_str} ({offset_formatted})</span></div>'
             except:
                 pass
     
@@ -83,7 +83,7 @@ def update_clock():
             date_str = time_in_tz.strftime("%a, %b %d, %Y")
             utc_offset = time_in_tz.strftime("%z")
             offset_formatted = f"{utc_offset[:3]}:{utc_offset[3:]}"
-            clock_html += f'<div style="margin: 10px 0; padding: 8px; border: 2px solid #ffff00; border-radius: 5px;"><strong>✨ {tz_name}</strong><br><span style="font-size: 16px; font-weight: bold;">{time_str}</span><br><span style="font-size: 10px; color: #888;">{date_str} (UTC{offset_formatted})</span></div>'
+            clock_html += f'<div style="margin: 10px 0; padding: 8px; border: 2px solid #ffff00; border-radius: 5px;"><strong>✨ {tz_name}</strong><br><span style="font-size: 16px; font-weight: bold;">{time_str}</span><br><span style="font-size: 11px; color: #888;">{date_str} ({offset_formatted})</span></div>'
         except:
             pass
     
