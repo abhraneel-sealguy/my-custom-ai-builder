@@ -1,12 +1,91 @@
 import streamlit as st
 from google import genai
 import base64
+from datetime import datetime
+import pytz
 
 # 1. Setup the Webpage Title and Style
 st.set_page_config(page_title="Free Custom AI Builder", page_icon="🤖", layout="wide")
 
 st.title("🤖 Free Custom AI Generator with Image Capabilities")
 st.write("Describe what kind of AI expert you need, and our background AI will build it for you instantly! Plus, generate, analyze images, and solve problems from pictures.")
+
+# Add a Digital Clock Display at the top
+st.divider()
+
+# Create columns for the clock display
+col1, col2, col3 = st.columns([1, 2, 1])
+
+with col2:
+    st.subheader("🕐 World Clock")
+    
+    # Select timezones
+    timezones = [
+        "UTC",
+        "America/New_York",
+        "Europe/London",
+        "Europe/Paris",
+        "Asia/Tokyo",
+        "Asia/Shanghai",
+        "Asia/Singapore",
+        "Asia/Dubai",
+        "Australia/Sydney",
+        "America/Los_Angeles",
+        "America/Chicago",
+        "America/Denver",
+        "America/Mexico_City",
+        "America/Toronto",
+        "America/Sao_Paulo",
+        "Africa/Cairo",
+        "India/Kolkata",
+    ]
+    
+    selected_timezones = st.multiselect(
+        "Select timezones to display:",
+        timezones,
+        default=["UTC", "America/New_York", "Asia/Tokyo"]
+    )
+    
+    # Display clock for each selected timezone
+    if selected_timezones:
+        st.write("---")
+        # Create a placeholder for the clock
+        clock_placeholder = st.empty()
+        
+        # Display times
+        timezone_data = {}
+        for tz_name in selected_timezones:
+            try:
+                tz = pytz.timezone(tz_name)
+                current_time = datetime.now(tz)
+                timezone_data[tz_name] = current_time
+            except:
+                pass
+        
+        # Format and display
+        clock_html = "<div style='text-align: center;'>"
+        for tz_name, current_time in timezone_data.items():
+            time_str = current_time.strftime("%H:%M:%S")
+            date_str = current_time.strftime("%A, %B %d, %Y")
+            offset = current_time.strftime("%z")
+            offset_formatted = f"{offset[:3]}:{offset[3:]}" if offset else "UTC"
+            
+            clock_html += f"""
+            <div style='margin: 15px 0; padding: 15px; background-color: #f0f2f6; border-radius: 10px; border-left: 5px solid #1f77b4;'>
+                <p style='margin: 5px 0; font-weight: bold; color: #1f77b4; font-size: 18px;'>{tz_name.replace('_', ' ').replace('/', ' - ')}</p>
+                <p style='margin: 5px 0; font-size: 32px; font-weight: bold; font-family: monospace; color: #0d47a1;'>{time_str}</p>
+                <p style='margin: 5px 0; font-size: 12px; color: #666;'>{date_str}</p>
+                <p style='margin: 5px 0; font-size: 11px; color: #999;'>UTC {offset_formatted}</p>
+            </div>
+            """
+        
+        clock_html += "</div>"
+        st.markdown(clock_html, unsafe_allow_html=True)
+        
+        # Auto-refresh note
+        st.info("💡 Refresh this page or re-run to update the clock")
+
+st.divider()
 
 # 2. Securely Ask the User for their Gemini API Key
 user_api_key = st.text_input("Step 1: Enter your Google Gemini API Key", type="password",
