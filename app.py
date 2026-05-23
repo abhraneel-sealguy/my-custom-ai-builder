@@ -6,7 +6,7 @@ import base64
 st.set_page_config(page_title="Free Custom AI Builder", page_icon="🤖", layout="wide")
 
 st.title("🤖 Free Custom AI Generator with Image Capabilities")
-st.write("Describe what kind of AI expert you need, and our background AI will build it for you instantly! Plus, generate and analyze images.")
+st.write("Describe what kind of AI expert you need, and our background AI will build it for you instantly! Plus, generate, analyze images, and solve problems from pictures.")
 
 # 2. Securely Ask the User for their Gemini API Key
 user_api_key = st.text_input("Step 1: Enter your Google Gemini API Key", type="password",
@@ -35,7 +35,7 @@ else:
             else:
                 with st.spinner("Background AI is formatting and training your custom persona..."):
                     # We instruct the background AI to generate system instructions
-                    meta_prompt = f"You are a master AI engineer. Create a highly detailed system prompt/persona for an AI whose job is: '{ai_purpose}'. Return only the rules, tone, constraints, and key behaviors. Be specific and creative."
+                    meta_prompt = f"You are a master AI engineer. Create a highly detailed system prompt/persona for an AI whose job is: '{ai_purpose}'. Return only the rules, tone, constraints, and behavioral guidelines. Be specific and detailed."
 
                     response = client.models.generate_content(
                         model='gemini-2.5-flash',
@@ -52,7 +52,7 @@ else:
             st.divider()
             
             # Create tabs for different interaction modes
-            tab1, tab2, tab3 = st.tabs(["💬 Chat", "🖼️ Generate Images", "🔍 Analyze Images"])
+            tab1, tab2, tab3, tab4 = st.tabs(["💬 Chat", "🖼️ Generate Images", "🔍 Analyze Images", "📐 Solve Problems"])
             
             with tab1:
                 st.subheader("Step 3: Chat with your Custom AI")
@@ -108,7 +108,7 @@ else:
                     else:
                         with st.spinner("Your AI is crafting the perfect image prompt..."):
                             # First, have the custom AI create a detailed prompt based on its personality
-                            prompt_creation = f"SYSTEM INSTRUCTIONS:\n{st.session_state['custom_persona']}\n\nYou are being asked to create a detailed image generation prompt. The user wants: {image_description}\n\nCreate a vivid, detailed prompt that matches your personality and the user's request. Return ONLY the image prompt, nothing else."
+                            prompt_creation = f"SYSTEM INSTRUCTIONS:\n{st.session_state['custom_persona']}\n\nYou are being asked to create a detailed image generation prompt. The user wants: {image_description}. Create a vivid, detailed prompt that captures the essence of what they want while incorporating your personality and style."
                             
                             prompt_response = client.models.generate_content(
                                 model='gemini-2.5-flash',
@@ -184,7 +184,113 @@ else:
                                 
                             except Exception as image_error:
                                 st.error(f"Error analyzing image: {str(image_error)}")
-                                st.info("💡 Troubleshooting tips:\n1. Make sure your Gemini API key has vision capabilities\n2. Try with a different image format (PNG or JPG)\n3. Check that your API account has Vision API access enabled")
+                                st.info("💡 Troubleshooting tips:\n1. Make sure your Gemini API key has vision capabilities\n2. Try with a different image format (PNG or JPG)\n3. Check your internet connection")
+
+            with tab4:
+                st.subheader("📐 Solve Problems from Pictures")
+                st.write("Upload an image containing a problem (math, physics, logic puzzles, etc.) and your custom AI will solve it step-by-step!")
+                
+                # Problem type selector
+                problem_type = st.selectbox(
+                    "What type of problem is this?",
+                    [
+                        "Mathematics (Algebra, Calculus, Statistics)",
+                        "Geometry (Shapes, proofs, diagrams)",
+                        "Physics (Equations, mechanics, energy)",
+                        "Chemistry (Reactions, compounds)",
+                        "Logic Puzzles & Games",
+                        "Sudoku & Number Puzzles",
+                        "Other"
+                    ],
+                    key="problem_type"
+                )
+                
+                # File uploader for problem image
+                problem_file = st.file_uploader("Upload the image with the problem:", type=["jpg", "jpeg", "png", "gif", "webp"], key="problem_upload")
+                
+                # Additional context
+                additional_context = st.text_area(
+                    "Any additional information about the problem? (optional)",
+                    placeholder="Example: This is from Chapter 5 on quadratic equations, or provide any constraints",
+                    key="problem_context"
+                )
+                
+                if problem_file and st.button("🧠 Solve This Problem", type="primary"):
+                    with st.spinner("Your AI is solving the problem..."):
+                        try:
+                            # Read the problem image
+                            problem_data = problem_file.read()
+                            
+                            # Display the problem image
+                            st.image(problem_data, caption="Problem Image", use_column_width=True)
+                            
+                            # Encode to base64
+                            problem_base64 = base64.standard_b64encode(problem_data).decode("utf-8")
+                            
+                            # Determine media type
+                            file_ext = problem_file.name.split('.')[-1].lower()
+                            media_types = {
+                                'jpg': 'image/jpeg',
+                                'jpeg': 'image/jpeg',
+                                'png': 'image/png',
+                                'gif': 'image/gif',
+                                'webp': 'image/webp'
+                            }
+                            media_type = media_types.get(file_ext, 'image/jpeg')
+                            
+                            # Create the problem-solving prompt with custom AI persona
+                            solving_prompt = f"""SYSTEM INSTRUCTIONS:
+{st.session_state['custom_persona']}
+
+TASK: Solve the problem shown in the image. This is a {problem_type} problem.
+{f'Additional context: {additional_context}' if additional_context else ''}
+
+Please provide:
+1. **Problem Statement**: Extract and restate the problem clearly
+2. **Understanding**: Explain what the problem is asking
+3. **Solution Steps**: Show detailed step-by-step work
+4. **Calculations/Logic**: Show all mathematical or logical reasoning
+5. **Answer**: State the final answer clearly
+6. **Verification**: Double-check the answer and explain why it's correct
+7. **Alternative Methods**: If applicable, show alternative approaches
+8. **Concepts Used**: Explain the key concepts or formulas applied
+
+Be thorough, clear, and educational in your explanation while maintaining your AI's unique personality and style."""
+                            
+                            # Create image part
+                            problem_image_part = genai.Part(
+                                inline_data=genai.types.BlobData(
+                                    mime_type=media_type,
+                                    data=problem_base64
+                                )
+                            )
+                            
+                            # Send to Gemini for solving
+                            solution_response = client.models.generate_content(
+                                model='gemini-2.5-flash',
+                                contents=[
+                                    solving_prompt,
+                                    problem_image_part
+                                ]
+                            )
+                            
+                            st.success("✅ Problem solved!")
+                            st.write("**Solution:**")
+                            st.write(solution_response.text)
+                            
+                            # Option to download solution
+                            if st.button("📥 Download Solution as Text"):
+                                solution_text = f"PROBLEM TYPE: {problem_type}\n\nCONTEXT: {additional_context if additional_context else 'None provided'}\n\nSOLUTION:\n\n{solution_response.text}"
+                                st.download_button(
+                                    label="Click to download",
+                                    data=solution_text,
+                                    file_name="problem_solution.txt",
+                                    mime="text/plain"
+                                )
+                            
+                        except Exception as problem_error:
+                            st.error(f"Error solving problem: {str(problem_error)}")
+                            st.info("💡 Troubleshooting tips:\n1. Make sure the image is clear and readable\n2. Ensure your API key supports vision\n3. Try with a different image format (PNG or JPG recommended)\n4. Make sure the problem is fully visible in the image")
 
     except Exception as e:
         st.error(f"An error occurred. Check your API key or connection. Details: {e}")
