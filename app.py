@@ -10,82 +10,88 @@ st.set_page_config(page_title="Free Custom AI Builder", page_icon="🤖", layout
 st.title("🤖 Free Custom AI Generator with Image Capabilities")
 st.write("Describe what kind of AI expert you need, and our background AI will build it for you instantly! Plus, generate, analyze images, and solve problems from pictures.")
 
-# Add a Digital Clock Display at the top
-st.divider()
+# Display Digital Clock with Timezones in sidebar
+st.sidebar.markdown("---")
+st.sidebar.subheader("⏰ Global Time Zones")
 
-# Create columns for the clock display
-col1, col2, col3 = st.columns([1, 2, 1])
+# Common timezones
+timezones = {
+    "🌍 UTC": "UTC",
+    "🇺🇸 Eastern (ET)": "America/New_York",
+    "🇺🇸 Central (CT)": "America/Chicago",
+    "🇺🇸 Mountain (MT)": "America/Denver",
+    "🇺🇸 Pacific (PT)": "America/Los_Angeles",
+    "🇬🇧 London (GMT)": "Europe/London",
+    "🇪🇺 Paris (CET)": "Europe/Paris",
+    "🇮🇳 India (IST)": "Asia/Kolkata",
+    "🇨🇳 Beijing (CST)": "Asia/Shanghai",
+    "🇯🇵 Tokyo (JST)": "Asia/Tokyo",
+    "🇦🇺 Sydney (AEDT)": "Australia/Sydney",
+    "🇧🇷 São Paulo (BRT)": "America/Sao_Paulo",
+    "🇦🇪 Dubai (GST)": "Asia/Dubai",
+    "🇸🇬 Singapore (SGT)": "Asia/Singapore",
+}
 
-with col2:
-    st.subheader("🕐 World Clock")
+# Allow user to select which timezones to display
+selected_timezones = st.sidebar.multiselect(
+    "Select timezones to display:",
+    list(timezones.keys()),
+    default=["🌍 UTC", "🇺🇸 Eastern (ET)", "🇯🇵 Tokyo (JST)"]
+)
+
+# Allow user to add custom timezones
+st.sidebar.markdown("**Add Custom Timezone:**")
+custom_tz_input = st.sidebar.text_input("Enter timezone (e.g., America/New_York):", "")
+custom_timezones = {}
+if custom_tz_input:
+    try:
+        pytz.timezone(custom_tz_input)
+        custom_timezones = {custom_tz_input: custom_tz_input}
+    except pytz.exceptions.UnknownTimeZoneError:
+        st.sidebar.error(f"Invalid timezone: {custom_tz_input}")
+
+# Create a placeholder for the clock display
+clock_placeholder = st.sidebar.empty()
+
+# Function to update clock
+def update_clock():
+    current_time = datetime.now()
     
-    # Select timezones
-    timezones = [
-        "UTC",
-        "America/New_York",
-        "Europe/London",
-        "Europe/Paris",
-        "Asia/Tokyo",
-        "Asia/Shanghai",
-        "Asia/Singapore",
-        "Asia/Dubai",
-        "Australia/Sydney",
-        "America/Los_Angeles",
-        "America/Chicago",
-        "America/Denver",
-        "America/Mexico_City",
-        "America/Toronto",
-        "America/Sao_Paulo",
-        "Africa/Cairo",
-        "India/Kolkata",
-    ]
+    clock_html = '<div style="background-color: #1e1e1e; padding: 15px; border-radius: 10px; font-family: monospace; color: #00ff00; font-size: 12px;">'
     
-    selected_timezones = st.multiselect(
-        "Select timezones to display:",
-        timezones,
-        default=["UTC", "America/New_York", "Asia/Tokyo"]
-    )
-    
-    # Display clock for each selected timezone
-    if selected_timezones:
-        st.write("---")
-        # Create a placeholder for the clock
-        clock_placeholder = st.empty()
-        
-        # Display times
-        timezone_data = {}
-        for tz_name in selected_timezones:
+    # Display selected timezones
+    for label in selected_timezones:
+        if label in timezones:
+            tz_name = timezones[label]
             try:
                 tz = pytz.timezone(tz_name)
-                current_time = datetime.now(tz)
-                timezone_data[tz_name] = current_time
+                time_in_tz = current_time.astimezone(tz)
+                time_str = time_in_tz.strftime("%H:%M:%S")
+                date_str = time_in_tz.strftime("%a, %b %d, %Y")
+                utc_offset = time_in_tz.strftime("%z")
+                offset_formatted = f"{utc_offset[:3]}:{utc_offset[3:]}"
+                clock_html += f'<div style="margin: 10px 0; padding: 8px; border: 1px solid #00ff00; border-radius: 5px;"><strong>{label}</strong><br><span style="font-size: 16px; font-weight: bold;">{time_str}</span><br><span style="font-size: 10px; color: #888;">{date_str} (UTC{offset_formatted})</span></div>'
             except:
                 pass
-        
-        # Format and display
-        clock_html = "<div style='text-align: center;'>"
-        for tz_name, current_time in timezone_data.items():
-            time_str = current_time.strftime("%H:%M:%S")
-            date_str = current_time.strftime("%A, %B %d, %Y")
-            offset = current_time.strftime("%z")
-            offset_formatted = f"{offset[:3]}:{offset[3:]}" if offset else "UTC"
-            
-            clock_html += f"""
-            <div style='margin: 15px 0; padding: 15px; background-color: #f0f2f6; border-radius: 10px; border-left: 5px solid #1f77b4;'>
-                <p style='margin: 5px 0; font-weight: bold; color: #1f77b4; font-size: 18px;'>{tz_name.replace('_', ' ').replace('/', ' - ')}</p>
-                <p style='margin: 5px 0; font-size: 32px; font-weight: bold; font-family: monospace; color: #0d47a1;'>{time_str}</p>
-                <p style='margin: 5px 0; font-size: 12px; color: #666;'>{date_str}</p>
-                <p style='margin: 5px 0; font-size: 11px; color: #999;'>UTC {offset_formatted}</p>
-            </div>
-            """
-        
-        clock_html += "</div>"
-        st.markdown(clock_html, unsafe_allow_html=True)
-        
-        # Auto-refresh note
-        st.info("💡 Refresh this page or re-run to update the clock")
+    
+    # Display custom timezone if added
+    for tz_name in custom_timezones.keys():
+        try:
+            tz = pytz.timezone(tz_name)
+            time_in_tz = current_time.astimezone(tz)
+            time_str = time_in_tz.strftime("%H:%M:%S")
+            date_str = time_in_tz.strftime("%a, %b %d, %Y")
+            utc_offset = time_in_tz.strftime("%z")
+            offset_formatted = f"{utc_offset[:3]}:{utc_offset[3:]}"
+            clock_html += f'<div style="margin: 10px 0; padding: 8px; border: 2px solid #ffff00; border-radius: 5px;"><strong>✨ {tz_name}</strong><br><span style="font-size: 16px; font-weight: bold;">{time_str}</span><br><span style="font-size: 10px; color: #888;">{date_str} (UTC{offset_formatted})</span></div>'
+        except:
+            pass
+    
+    clock_html += '</div>'
+    clock_placeholder.markdown(clock_html, unsafe_allow_html=True)
 
-st.divider()
+# Update clock on page load
+update_clock()
 
 # 2. Securely Ask the User for their Gemini API Key
 user_api_key = st.text_input("Step 1: Enter your Google Gemini API Key", type="password",
